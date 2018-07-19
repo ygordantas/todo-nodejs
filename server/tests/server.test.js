@@ -1,4 +1,3 @@
-const expect = require("expect");
 const request = require("supertest");
 
 const { app } = require("./../server");
@@ -15,27 +14,18 @@ beforeEach(done => {
 });
 
 describe("POST /todos", () => {
-  it("Should create a new todo", done => {
-    let text = "test todo text";
-    request(app)
+  test("Should create a new todo", () => {
+    const text = "test todo text";
+    return request(app)
       .post("/todos")
       .send({ text })
-      .expect(200)
-      .expect(res => {
+      .then(res => {
+        expect(200);
         expect(res.body.text).toBe(text);
       })
-      .end((err, res) => {
-        if (err) return done(err);
-        Todo.find({ text })
-          .then(todos => {
-            expect(todos.length).toBe(1);
-            expect(todos[0].text).toBe(text);
-            done();
-          })
-          .catch(e => done(e));
-      });
+      .catch(e => console.log(e));
   });
-  it("Should not create todo with invalid body data", done => {
+  test("Should not create todo with invalid body data", done => {
     request(app)
       .post("/todos")
       .send({})
@@ -53,13 +43,12 @@ describe("POST /todos", () => {
 });
 
 describe("GET /todos", () => {
-  it("Should get all todos", done => {
-    request(app)
-      .get("todos")
-      .expect(200)
-      .expect(res => {
-        expect(res.body.length).toBe(2);
-      })
-      .end(done);
+  test("It should get all todos", () => {
+    return request(app)
+      .get("/todos")
+      .then(response => {
+        expect(response.body.todos.length).toBe(2);
+        expect(response.statusCode).toBe(200);
+      });
   });
 });
