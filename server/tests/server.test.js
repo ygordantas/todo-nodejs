@@ -9,13 +9,7 @@ const todos = [
   { _id: new ObjectId(), text: "second" }
 ];
 
-beforeEach(done => {
-  Todo.remove({})
-    .then(() => {
-      return Todo.insertMany(todos);
-    })
-    .then(() => done());
-});
+beforeEach(() => Todo.remove({}).then(() => Todo.insertMany(todos)));
 
 describe("POST /todos", () => {
   test("Should create a new todo", () => {
@@ -76,6 +70,39 @@ describe("GET /todos/:id", () => {
   test("Should return 404 for non-object ids", () => {
     return request(app)
       .get("/todos/123")
+      .then(res => {
+        expect(404);
+      });
+  });
+});
+describe("DELETE /todos/:id", () => {
+  test("Should delete a specific todo", () => {
+    let id = todos[0]._id.toHexString();
+    return request(app)
+      .delete(`/todos/${id}`)
+      .then(res => {
+        expect(200);
+        expect(res.body.todo._id).toBe(id);
+      })
+      .then(res => {
+        return Todo.findById(id).then(todo => {
+          expect(todo).toBeFalsy();
+        });
+      })
+      .catch(e => {
+        throw e;
+      });
+  });
+  test("Should return 404 for non-object ids", () => {
+    return request(app)
+      .delete("/todos/123adc")
+      .then(res => {
+        expect(404);
+      });
+  });
+  test("Should return 404 if todo not found", () => {
+    return request(app)
+      .delete(`/todos/${new ObjectId()}`)
       .then(res => {
         expect(404);
       });
