@@ -6,7 +6,7 @@ const { ObjectId } = require("mongodb");
 
 const todos = [
   { _id: new ObjectId(), text: "First" },
-  { _id: new ObjectId(), text: "second" }
+  { _id: new ObjectId(), text: "second", completed: true, completedAt: 333 }
 ];
 
 beforeEach(() => Todo.remove({}).then(() => Todo.insertMany(todos)));
@@ -107,4 +107,43 @@ describe("DELETE /todos/:id", () => {
         expect(404);
       });
   });
+});
+
+describe("PATCH /todos/:id", () => {
+  test("should update the given todo", () => {
+    const id = todos[0]._id.toHexString();
+    const text = "text from update";
+    return request(app)
+      .patch(`/todos/${id}`)
+      .send({ text, completed: true })
+      .then(res => {
+        expect(200);
+        expect(res.body.todo.text).toBe(text);
+        expect(res.body.todo.completed).toBe(true);
+        expect(typeof res.body.todo.completedAt).toBe("number");
+      });
+  });
+  test("Should clear completedAt when todo is not completed", () => {
+    const id = todos[1]._id.toHexString();
+    return request(app)
+      .patch(`/todos/${id}`)
+      .send({ completed: false })
+      .then(res => {
+        expect(200);
+        expect(res.body.todo.completed).toBe(false);
+        expect(res.body.todo.completedAt).toBeNull();
+      });
+  });
+  test("should return 404 if todo not found", () =>
+    request(app)
+      .patch(`/todos/${new ObjectId()}`)
+      .then(res => {
+        expect(404);
+      }));
+  test("Should return 404 for non-valid object Id", () =>
+    request(app)
+      .patch("/todos/123")
+      .then(res => {
+        expect(404);
+      }));
 });

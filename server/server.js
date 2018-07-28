@@ -63,7 +63,7 @@ app.delete("/todos/:id", (req, res) => {
 
 app.patch("/todos/:id", (req, res) => {
   let { id } = req.params;
-  let body = _.pick(req.body, ["text", "completed"]);
+  let body = _.pick(req.body, ["text", "completed"]); // {text: some text, completed: true}
   if (!ObjectId.isValid(id)) return res.status(404).send();
 
   if (_.isBoolean(body.completed) && body.completed) {
@@ -72,7 +72,7 @@ app.patch("/todos/:id", (req, res) => {
     body.completed = false;
     body.completedAt = null;
   }
-  Todo.findByIdAndUpdate(id, { $set: body }, { new: true })
+  Todo.findByIdAndUpdate(id, body, { new: true })
     .then(todo => {
       if (!todo) return res.status(404).send();
       res.status(200).send({ todo });
