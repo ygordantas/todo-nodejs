@@ -4,7 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 
 const { mongoose } = require("./db/mongoose");
-const { user } = require("./modules/user");
+const { User } = require("./modules/user");
 const { Todo } = require("./modules/todo");
 const { ObjectId } = require("mongodb");
 const _ = require("lodash");
@@ -80,6 +80,20 @@ app.patch("/todos/:id", (req, res) => {
       res.status(200).send({ todo });
     })
     .catch(e => res.status(400).send());
+});
+
+app.post("/users", (req, res) => {
+  const body = _.pick(req.body, ["email", "password"]);
+  const user = new User(body);
+  user
+    .save()
+    .then(() => {
+      return user.generateAuthToken();
+    })
+    .then(token => {
+      res.header("x-auth", token).send(user);
+    })
+    .catch(e => res.status(400).send(e));
 });
 
 app.listen(port, () => {
