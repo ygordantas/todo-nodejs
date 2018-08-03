@@ -2,12 +2,12 @@ require("./config/config");
 
 const express = require("express");
 const bodyParser = require("body-parser");
+const _ = require("lodash");
 
 const { mongoose } = require("./db/mongoose");
 const { User } = require("./modules/user");
 const { Todo } = require("./modules/todo");
 const { ObjectId } = require("mongodb");
-const _ = require("lodash");
 const { authenticate } = require("./middleware/authenticate");
 
 const app = express();
