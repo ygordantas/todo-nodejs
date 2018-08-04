@@ -2,14 +2,12 @@ const request = require("supertest");
 
 const { app } = require("./../server");
 const { Todo } = require("./../modules/todo");
+const { User } = require("./../modules/user");
 const { ObjectId } = require("mongodb");
+const { todos, populate, users, populateUsers } = require("./seed/seed");
 
-const todos = [
-  { _id: new ObjectId(), text: "First" },
-  { _id: new ObjectId(), text: "second", completed: true, completedAt: 333 }
-];
-
-beforeEach(() => Todo.remove({}).then(() => Todo.insertMany(todos)));
+beforeEach(populateUsers);
+beforeEach(populate);
 
 describe("POST /todos", () => {
   test("Should create a new todo", () => {
@@ -18,26 +16,23 @@ describe("POST /todos", () => {
       .post("/todos")
       .send({ text })
       .then(res => {
-        expect(200);
+        expect(res.status).toBe(200);
         expect(res.body.text).toBe(text);
       })
       .catch(e => console.log(e));
   });
-  test("Should not create todo with invalid body data", done => {
+  test("Should not create todo with invalid body data", () =>
     request(app)
       .post("/todos")
       .send({})
-      .expect(400)
-      .end((err, res) => {
-        if (err) return done(err);
-        Todo.find()
-          .then(todos => {
-            expect(todos.length).toBe(2);
-            done();
-          })
-          .catch(e => done(e));
-      });
-  });
+      .then(res => {
+        expect(res.status).toBe(400);
+      })
+      .then(() => {
+        Todo.find().then(todos => {
+          expect(todos.length).toBe(2);
+        });
+      }));
 });
 
 describe("GET /todos", () => {
@@ -46,7 +41,7 @@ describe("GET /todos", () => {
       .get("/todos")
       .then(response => {
         expect(response.body.todos.length).toBe(2);
-        expect(response.statusCode).toBe(200);
+        expect(response.status).toBe(200);
       });
   });
 });
@@ -56,7 +51,7 @@ describe("GET /todos/:id", () => {
     return request(app)
       .get(`/todos/${todos[0]._id}`)
       .then(res => {
-        expect(200);
+        expect(res.status).toBe(200);
         expect(res.body.todo.text).toBe(todos[0].text);
       });
   });
@@ -64,14 +59,14 @@ describe("GET /todos/:id", () => {
     return request(app)
       .get(`/todos/${new ObjectId()}`)
       .then(res => {
-        expect(404);
+        expect(res.status).toBe(404);
       });
   });
   test("Should return 404 for non-object ids", () => {
     return request(app)
       .get("/todos/123")
       .then(res => {
-        expect(404);
+        expect(res.status).toBe(404);
       });
   });
 });
@@ -81,7 +76,7 @@ describe("DELETE /todos/:id", () => {
     return request(app)
       .delete(`/todos/${id}`)
       .then(res => {
-        expect(200);
+        expect(res.status).toBe(200);
         expect(res.body.todo._id).toBe(id);
       })
       .then(res => {
@@ -97,14 +92,14 @@ describe("DELETE /todos/:id", () => {
     return request(app)
       .delete("/todos/123adc")
       .then(res => {
-        expect(404);
+        expect(res.status).toBe(404);
       });
   });
   test("Should return 404 if todo not found", () => {
     return request(app)
       .delete(`/todos/${new ObjectId()}`)
       .then(res => {
-        expect(404);
+        expect(res.status).toBe(404);
       });
   });
 });
@@ -117,7 +112,7 @@ describe("PATCH /todos/:id", () => {
       .patch(`/todos/${id}`)
       .send({ text, completed: true })
       .then(res => {
-        expect(200);
+        expect(res.status).toBe(200);
         expect(res.body.todo.text).toBe(text);
         expect(res.body.todo.completed).toBe(true);
         expect(typeof res.body.todo.completedAt).toBe("number");
@@ -129,7 +124,7 @@ describe("PATCH /todos/:id", () => {
       .patch(`/todos/${id}`)
       .send({ completed: false })
       .then(res => {
-        expect(200);
+        expect(res.status).toBe(200);
         expect(res.body.todo.completed).toBe(false);
         expect(res.body.todo.completedAt).toBeNull();
       });
@@ -138,12 +133,71 @@ describe("PATCH /todos/:id", () => {
     request(app)
       .patch(`/todos/${new ObjectId()}`)
       .then(res => {
-        expect(404);
+        expect(res.status).toBe(404);
       }));
   test("Should return 404 for non-valid object Id", () =>
     request(app)
       .patch("/todos/123")
       .then(res => {
-        expect(404);
+        expect(res.status).toBe(404);
+      }));
+});
+
+describe("GET users/me", () => {
+  test("Should return user if authenticated", () =>
+    request(app)
+      .get("/users/me")
+      .set("x-auth", users[0].tokens[0].token)
+      .then(res => {
+        expect(res.status).toBe(200);
+        expect(res.body._id).toBe(users[0]._id.toHexString());
+        expect(res.body.email).toBe(users[0].email);
+      }));
+  test("Should return 401 if not authenticated", () =>
+    request(app)
+      .get("/users/me")
+      .then(res => {
+        expect(res.status).toBe(401);
+        expect(res.body).toStrictEqual({});
+      }));
+});
+
+describe("POST /users", () => {
+  test("Should create a user ", () => {
+    const email = "test@email.com";
+    const password = "abc123!";
+    return request(app)
+      .post("/users")
+      .send({ email, password })
+      .then(res => {
+        expect(res.status).toBe(200);
+        expect(res.header).toHaveProperty("x-auth");
+        expect(res.body).toHaveProperty("_id");
+        expect(res.body.email).toBe(email);
+      })
+      .then(res => {
+        User.findOne({ email }).then(user => {
+          expect(user).toBeTruthy();
+          expect(user.email).toBe(email);
+          expect(user.password).not.toBe(password);
+        });
+      });
+  });
+  test("Should return validation errors if request invalid ", () => {
+    const email = "";
+    const password = "123";
+    return request(app)
+      .post("/users")
+      .send({ email, password })
+      .then(res => {
+        expect(res.status).toBe(400);
+      });
+  });
+  test("Should not create user if email in use", () =>
+    request(app)
+      .post("/users")
+      .send({ email: users[0].email, password: users[0].password })
+      .then(res => {
+        expect(res.status).toBe(400);
       }));
 });
