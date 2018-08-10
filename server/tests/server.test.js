@@ -174,9 +174,7 @@ describe("POST /users", () => {
         expect(res.header).toHaveProperty("x-auth");
         expect(res.body).toHaveProperty("_id");
         expect(res.body.email).toBe(email);
-      })
-      .then(res => {
-        User.findOne({ email }).then(user => {
+        return User.findOne({ email }).then(user => {
           expect(user).toBeTruthy();
           expect(user.email).toBe(email);
           expect(user.password).not.toBe(password);
@@ -199,5 +197,38 @@ describe("POST /users", () => {
       .send({ email: users[0].email, password: users[0].password })
       .then(res => {
         expect(res.status).toBe(400);
+      }));
+});
+
+describe("POST /users/login", () => {
+  test("should login user and return auth token", () =>
+    request(app)
+      .post("/users/login")
+      .send({ email: users[1].email, password: users[1].password })
+      .then(res => {
+        expect(res.status).toBe(200);
+        expect(res.header).toHaveProperty("x-auth");
+        return User.findById(users[1]._id)
+          .then(user => {
+            expect(user.tokens[0]).toHaveProperty("access", "auth");
+            expect(user.tokens[0]).toHaveProperty(
+              "token",
+              res.header["x-auth"]
+            );
+          })
+          .catch(e => {
+            throw new Error(e);
+          });
+      })
+      .catch(e => {
+        throw new Error(e);
+      }));
+  test("should reject invalid login", () =>
+    request(app)
+      .post("/users/login")
+      .send({ email: "notRegister@email.com", password: "itMightWork" })
+      .then(res => {
+        expect(res.status).toBe(400);
+        expect(res.header).not.toHaveProperty("x-auth");
       }));
 });
