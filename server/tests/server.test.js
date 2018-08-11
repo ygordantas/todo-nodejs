@@ -232,3 +232,23 @@ describe("POST /users/login", () => {
         expect(res.header).not.toHaveProperty("x-auth");
       }));
 });
+
+describe("DELETE /users/me/token", () => {
+  test("Should delete auth token on logout", () =>
+    request(app)
+      .delete("/users/me/token")
+      .set("x-auth", users[0].tokens[0].token)
+      .then(res => {
+        expect(res.status).toBe(200);
+        return User.findById(users[0]._id)
+          .then(user => {
+            expect(user.tokens.length).toBe(0);
+          })
+          .catch(e => {
+            throw new Error(e);
+          });
+      })
+      .catch(e => {
+        throw new Error(e);
+      }));
+});
