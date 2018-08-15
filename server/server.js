@@ -5,8 +5,8 @@ const bodyParser = require("body-parser");
 const _ = require("lodash");
 
 const { mongoose } = require("./db/mongoose");
-const { User } = require("./modules/user");
-const { Todo } = require("./modules/todo");
+const { User } = require("./models/user");
+const { Todo } = require("./models/todo");
 const { ObjectId } = require("mongodb");
 const { authenticate } = require("./middleware/authenticate");
 

@@ -1,8 +1,8 @@
 const request = require("supertest");
 
 const { app } = require("./../server");
-const { Todo } = require("./../modules/todo");
-const { User } = require("./../modules/user");
+const { Todo } = require("./../models/todo");
+const { User } = require("./../models/user");
 const { ObjectId } = require("mongodb");
 const { todos, populate, users, populateUsers } = require("./seed/seed");
 
